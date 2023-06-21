@@ -1,0 +1,217 @@
+openapi: 3.1.0
+info:
+  title: Food Empire API
+  version: 0.5.1
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+externalDocs:
+  url: https://redocly.com/docs/food-empire
+  description: Learn more about the Food Empire API
+servers:
+  - url: http://localhost:8080
+    description: Local development setup
+security: []
+tags:
+  - name: site
+    description: Restaurant sites
+  - name: user
+    description: Users
+
+paths:
+  '/users':
+    get:
+      operationId: usersList
+      summary: All registered users
+      tags:
+        - user
+      responses:
+        "200":
+          description: User list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        "400":
+          $ref: '#/components/responses/Error'
+
+    post:
+      operationId: userCreate
+      summary: Add a new user to the system
+      tags:
+        - user
+      requestBody:  
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        "200":
+          description: The new user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        "400":
+          $ref: '#/components/responses/Error'
+        "409":
+          description: Duplicate username
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type: 
+                    type: string
+                    example: https://example.com/conflicting-data
+                  title:
+                    type: string
+                    example: Data conflict
+                  detail:
+                    type: string
+                    example: Username is in use
+                examples:
+                  - Error1:
+                      type: https://example.com/conflicting-data
+                      title: Data conflict
+                      detail: The user could not be created because this username already exists
+                      instance: 0123456789abcdef
+
+  '/users/{username}':
+    get:
+      operationId: userSingle
+      summary: Detail of the specified user
+      tags:
+        - user
+      parameters:
+        - name: username
+          in: path
+          required: true
+          description: Username of the user to retrieve
+          schema:
+            type: string
+            example: jane
+
+      responses:
+        "200":
+          description: User detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        "400":
+          $ref: '#/components/responses/Error'
+
+  '/sites':
+    get:
+      operationId: sitesList
+      summary: All restaurant sites
+      tags:
+        - site
+      responses:
+        "200":
+          description: List all sites
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Site'
+        "400":
+          $ref: '#/components/responses/Error'
+
+    post:
+      operationId: siteCreate
+      summary: Add a new restaurant site
+      tags:
+        - site
+      requestBody:  
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/Site'
+                - title: webhook-url
+                  description: Where to send the site information when created
+                  type: string
+                  example: https://example.com/webhooks/new-site
+      responses:
+        "202":
+          description: New restaurant site queued for creation
+          content:
+            application/json:
+              schema:
+                type: string
+                example: "Data accepted"
+        "400":
+          $ref: '#/components/responses/Error'
+
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        username:
+          type: string
+          description: User's nickname, lowercase, must be unique
+          minLength: 6
+          pattern: ^[a-z0-9]*$
+          example: jane
+        display-name:
+          type: string
+          description: User's name to display in the UI and elsewhere
+          example: Cooking Fairy
+      examples:
+        - Jane:
+            username: jane
+            display-name: Cooking Fairy
+        - John:
+            username: john77
+            display-name: Kitchen Elf
+
+    Site:
+      type: object
+      properties:
+        site-id:
+          type: number
+          description: Unique ID for the restaurant site
+          example: 114
+        name:
+          type: string
+          description: Display name for the restaurant
+          example: Pancake Palace
+        description:
+          type: string
+          description: More information about the place, the food. Used in detailed listings.
+          example: The sweetest spot in town, serving traditional pancakes and regional delicacies.
+        address:
+          type: string
+          description: An address string that users and map applications will recognise
+          example: 7 Foodie Square, Somewheretown
+
+  responses:
+    Error:
+      description: Error response (in RFC8707 format)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              type: 
+                type: string
+                example: https://example.com/generic_error.html
+              title:
+                type: string
+                example: Generic Error
+              detail:
+                type: string
+                example: Something went wrong, sorry 
+            examples:
+              - Error1:
+                  type: https://example.com/errors/error1
+                  title: Unknown error
+                  detail: A message that describes the error
+                  instance: 0123456789abcdef
+
